@@ -256,6 +256,7 @@ redsocks2_iptables_start_instance() {
 	iptables -t nat -A $CHAIN_NAME -d 224.0.0.0/4 -j RETURN
 	iptables -t nat -A $CHAIN_NAME -d 240.0.0.0/4 -j RETURN
 	iptables -t nat -A $CHAIN_NAME -d $server_ip -j RETURN
+	ipset create gfwlist hash:net hashsize 4096
 
 	[ "$blacklist_enabled" = '1' ] && {
 		sed -e "s/^/-A blacklist &/g" -e "1 i\-N blacklist nethash --hashsize 64" $ipset_blacklist | ipset -R -!
@@ -264,6 +265,7 @@ redsocks2_iptables_start_instance() {
 	}
 	if [ "$whitelist_enabled" = '1' ];then
 		sed -e "s/^/-A whitelist &/g" -e "1 i\-N whitelist nethash --hashsize 4096" $ipset_whitelist | ipset -R -!
+		iptables -t nat -A $CHAIN_NAME -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-ports "$dest_port" 
 		iptables -t nat -A $CHAIN_NAME -p tcp -m set ! --match-set whitelist dst -j REDIRECT --to-ports "$dest_port"
 		iptables -t nat -A REDUDP -p tcp -m set ! --match-set whitelist dst -j REDIRECT --to-ports 20000
 	else
